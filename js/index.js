@@ -16,6 +16,61 @@ let lives = 3;
 let livesText;
 let lifeLostText;
 const textStyle = { font: '18px Arial', fill: '#0095DD' };
+let playing = false;
+let startButton;
+
+// предзагрузка ресурсов игры
+function preload() {
+  game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;// масштабирование игры до
+  // размера экрана с сохранением пропорций
+  game.scale.pageAlignHorizontally = true;// выравнивание по горизонтали
+  game.scale.pageAlignVertically = true;// выравнивание по вертикали
+  game.stage.backgroundColor = '#eee';// цвет фона
+  game.load.image('ball', 'img/ball.png');// загрузка спрайта мяча
+  game.load.image('paddle', 'img/paddle.png');// загруза спрайта ракетки
+  game.load.image('brick', 'img/brick.png');
+  game.load.spritesheet('ball', 'img/wobble.png', 20, 20);
+  game.load.spritesheet('button', 'img/button.png', 120, 40);
+}
+// вызывается только один раз, когда всё загружено и готово
+function create() {
+  game.physics.startSystem(Phaser.Physics.ARCADE);// подключение физики типа АРКАДА
+  ball = game.add.sprite(game.world.width * 0.5, game.world.height - 25, 'ball');// добавление спрайта на холст
+  ball.animations.add('wobble', [0, 1, 0, 2, 0, 1, 0, 2, 0], 24);
+  // указание его начальных координат и имени
+  ball.anchor.set(0.5);// смежение центра объекта в центр спрайта (по умолчанию левый край)
+  paddle = game.add.sprite(game.world.width * 0.5, game.world.height - 5, 'paddle');
+  paddle.anchor.set(0.5, 1);
+  game.physics.enable(ball, Phaser.Physics.ARCADE);// включение в физику игры мячика
+  ball.body.collideWorldBounds = true;// включение границ холста для мячика, чтобы не вылетал
+  ball.body.bounce.set(1);// заставляет мяч отскакивать от стен
+  // ball.body.velocity.set(150, -150);// начальное направление движения мяча
+  game.physics.arcade.checkCollision.down = false; // отключение границ для низа
+  ball.checkWorldBounds = true;// слежение, что мячик внутри границ
+  ball.events.onOutOfBounds.add(ballLeaveScreen, this);
+  game.physics.enable(paddle, Phaser.Physics.ARCADE);// добавляем в физику мира ракетку
+  paddle.body.immovable = true;// делаем ракетку несбиваемой
+  initBricks();// отрисовка кирпичей
+  scoreText = game.add.text(5, 5, 'Points: 0', textStyle);
+  livesText = game.add.text(game.world.width - 35, 20, `Lives: ${lives}`, textStyle);
+  livesText.anchor.set(1, 0);
+  lifeLostText = game.add.text(game.world.width * 0.5, game.world.height * 0.5, 'Life lost, click to continue', textStyle);
+  livesText.anchor.set(0.5);
+  lifeLostText.visible = false;
+  startButton = game.add.button(game.world.width * 0.5, game.world.height * 0.5, 'button', startGame, this, 1, 0, 2);
+  startButton.anchor.set(0.5);
+}
+// вызывается на каждом кадре
+function update() {
+  game.physics.arcade.collide(ball, paddle, ballHitPaddle);// отслеживает столкновение
+  // шарика и ракетки
+  game.physics.arcade.collide(ball, bricks, ballHitBrick);// отслеживает столкновение мячива и
+  // кирпичика и при каждом столкновении вызывает функцию
+  if (playing) {
+    paddle.x = game.input.x || game.world.width * 0.5;// смещает позицию ракетки в соответствии
+    // с позицией курсора или ставит по центру, если позиция курсора не определена
+  }
+}
 
 // функция иницилизирующая кирпичи
 function initBricks() {
@@ -53,54 +108,14 @@ function initBricks() {
   }
 }
 
-// предзагрузка ресурсов игры
-function preload() {
-  game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;// масштабирование игры до
-  // размера экрана с сохранением пропорций
-  game.scale.pageAlignHorizontally = true;// выравнивание по горизонтали
-  game.scale.pageAlignVertically = true;// выравнивание по вертикали
-  game.stage.backgroundColor = '#eee';// цвет фона
-  game.load.image('ball', 'img/ball.png');// загрузка спрайта мяча
-  game.load.image('paddle', 'img/paddle.png');// загруза спрайта ракетки
-  game.load.image('brick', 'img/brick.png');
-}
-// вызывается только один раз, когда всё загружено и готово
-function create() {
-  game.physics.startSystem(Phaser.Physics.ARCADE);// подключение физики типа АРКАДА
-  ball = game.add.sprite(game.world.width * 0.5, game.world.height - 25, 'ball');// добавление спрайта на холст
-  // указание его начальных координат и имени
-  ball.anchor.set(0.5);// смежение центра объекта в центр спрайта (по умолчанию левый край)
-  paddle = game.add.sprite(game.world.width * 0.5, game.world.height - 5, 'paddle');
-  paddle.anchor.set(0.5, 1);
-  game.physics.enable(ball, Phaser.Physics.ARCADE);// включение в физику игры мячика
-  ball.body.collideWorldBounds = true;// включение границ холста для мячика, чтобы не вылетал
-  ball.body.bounce.set(1);// заставляет мяч отскакивать от стен
-  ball.body.velocity.set(150, -150);// начальное направление движения мяча
-  game.physics.arcade.checkCollision.down = false; // отключение границ для низа
-  ball.checkWorldBounds = true;// слежение, что мячик внутри границ
-  ball.events.onOutOfBounds.add(ballLeaveScreen, this);
-  game.physics.enable(paddle, Phaser.Physics.ARCADE);// добавляем в физику мира ракетку
-  paddle.body.immovable = true;// делаем ракетку несбиваемой
-  initBricks();// отрисовка кирпичей
-  scoreText = game.add.text(5, 5, 'Points: 0', textStyle);
-  livesText = game.add.text(game.world.width - 35, 20, `Lives: ${lives}`, textStyle);
-  livesText.anchor.set(1, 0);
-  lifeLostText = game.add.text(game.world.width * 0.5, game.world.height * 0.5, 'Life lost, click to continue', textStyle);
-  livesText.anchor.set(0.5);
-  lifeLostText.visible = false;
-}
-// вызывается на каждом кадре
-function update() {
-  game.physics.arcade.collide(ball, paddle);// отслеживает столкновение шарика и ракетки
-  game.physics.arcade.collide(ball, bricks, ballHitBrick);// отслеживает столкновение мячива и
-  // кирпичика и при каждом столкновении вызывает функцию
-  paddle.x = game.input.x || game.world.width * 0.5;// смещает позицию ракетки в соответствии
-  // с позицией курсора или ставит по центру, если позиция курсора не определена
-}
-
 // функция которая вызывается при столкновении мячика и кирпичика, которая уничтожает кирпич
 function ballHitBrick(ball, brick) {
-  brick.kill();
+  const killTween = game.add.tween(brick.scale);
+  killTween.to({ x: 0, Y: 0 }, 200, Phaser.Easing.Linear.None);
+  killTween.onComplete.addOnce(() => {
+    brick.kill();
+  }, this);
+  killTween.start();
   score += 1;
   scoreText.setText(`Points: ${score}`);
 
@@ -133,4 +148,15 @@ function ballLeaveScreen() {
     alert('Game over!');// если мяч вылетел, то Game Over
     document.location.reload();// и перезагрузка страницы
   }
+}
+
+function ballHitPaddle(ball, paddle) {
+  ball.animations.play('wobble');
+  ball.body.velocity.x = -1 * 5 * (paddle.x - ball.x);
+}
+
+function startGame() {
+  startButton.destroy();
+  ball.body.velocity.set(150, -150);
+  playing = true;
 }
