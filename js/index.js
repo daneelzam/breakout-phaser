@@ -7,33 +7,43 @@ const game = new Phaser.Game(480, 480, Phaser.CANVAS, null, {
 // переменные мяча и ракетки
 let ball;
 let paddle;
-let bricks;
-let newBrick;
-let brickInfo;
+let bricks;// массив кирпичиков
+let newBrick;// один кирпич
+let brickInfo;// инфо о кирпичах
+let scoreText;
+let score = 0;
 
-function initBricks(params) {
+// функция иницилизирующая кирпичи
+function initBricks() {
+  // описание кирпичей
   brickInfo = {
-    width: 50,
-    height: 20,
+    width: 50, // ширина
+    height: 20, // высота
     count: {
-      row: 3,
-      col: 7,
+      row: 3, // кол-во строк
+      col: 7, // кол-во столбцов
     },
     offset: {
-      top: 50,
-      left: 60,
+      top: 50, // отступ сверху
+      left: 60, // отсутп слева
     },
-    padding: 10,
+    padding: 10, // отсути между
   };
-  bricks = game.add.group();
-  for (let c = 0; c < brickInfo.count.col; c += 1) {
-    for (let r = 0; r < brickInfo.count.row; r += 1) {
-      let brickX = (c * (brickInfo.width + brickInfo.padding)) + brickInfo.offset.left;
-      let brickY = (r * (brickInfo.height + brickInfo.padding)) + brickInfo.offset.top;
+  bricks = game.add.group(); // инициализация кирпичей в игре
+  for (let c = 0; c < brickInfo.count.col; c += 1) { // цикл по столбцам
+    for (let r = 0; r < brickInfo.count.row; r += 1) { // цикл по строкам
+      // расчет стартовой позиции в зависимости от столбца и строки
+      const brickX = (c * (brickInfo.width + brickInfo.padding)) + brickInfo.offset.left;
+      const brickY = (r * (brickInfo.height + brickInfo.padding)) + brickInfo.offset.top;
+      // создание нового спрайта кирпича
       newBrick = game.add.sprite(brickX, brickY, 'brick');
+      // добавление нашего спрайти в физику игры
       game.physics.enable(newBrick, Phaser.Physics.ARCADE);
+      // кирпичь не сбивается шариком
       newBrick.body.immovable = true;
+      // смещение центра кирпича
       newBrick.anchor.set(0.5);
+      // добавление кирпича в коллекцию кирпичей
       bricks.add(newBrick);
     }
   }
@@ -70,16 +80,21 @@ function create() {
   }, this);
   game.physics.enable(paddle, Phaser.Physics.ARCADE);// добавляем в физику мира ракетку
   paddle.body.immovable = true;// делаем ракетку несбиваемой
-  initBricks();
+  initBricks();// отрисовка кирпичей
+  scoreText = game.add.text(5, 5, 'Points: 0', { font: '18px Arial', fill: '#0095DD' });
 }
 // вызывается на каждом кадре
 function update() {
   game.physics.arcade.collide(ball, paddle);// отслеживает столкновение шарика и ракетки
-  game.physics.arcade.collide(ball, bricks, ballHitBrick);
+  game.physics.arcade.collide(ball, bricks, ballHitBrick);// отслеживает столкновение мячива и
+  // кирпичика и при каждом столкновении вызывает функцию
   paddle.x = game.input.x || game.world.width * 0.5;// смещает позицию ракетки в соответствии
   // с позицией курсора или ставит по центру, если позиция курсора не определена
 }
 
+// функция которая вызывается при столкновении мячика и кирпичика, которая уничтожает кирпич
 function ballHitBrick(ball, brick) {
   brick.kill();
+  score += 1;
+  scoreText.setText(`Points: ${score}`);
 }
