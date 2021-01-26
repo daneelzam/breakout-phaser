@@ -12,6 +12,10 @@ let newBrick;// один кирпич
 let brickInfo;// инфо о кирпичах
 let scoreText;
 let score = 0;
+let lives = 3;
+let livesText;
+let lifeLostText;
+const textStyle = { font: '18px Arial', fill: '#0095DD' };
 
 // функция иницилизирующая кирпичи
 function initBricks() {
@@ -74,14 +78,16 @@ function create() {
   ball.body.velocity.set(150, -150);// начальное направление движения мяча
   game.physics.arcade.checkCollision.down = false; // отключение границ для низа
   ball.checkWorldBounds = true;// слежение, что мячик внутри границ
-  ball.events.onOutOfBounds.add(() => { // слушатель события, что мяч вышел за границы мира
-    alert('Game over!');// если мяч вылетел, то Game Over
-    document.location.reload();// и перезагрузка страницы
-  }, this);
+  ball.events.onOutOfBounds.add(ballLeaveScreen, this);
   game.physics.enable(paddle, Phaser.Physics.ARCADE);// добавляем в физику мира ракетку
   paddle.body.immovable = true;// делаем ракетку несбиваемой
   initBricks();// отрисовка кирпичей
-  scoreText = game.add.text(5, 5, 'Points: 0', { font: '18px Arial', fill: '#0095DD' });
+  scoreText = game.add.text(5, 5, 'Points: 0', textStyle);
+  livesText = game.add.text(game.world.width - 35, 20, `Lives: ${lives}`, textStyle);
+  livesText.anchor.set(1, 0);
+  lifeLostText = game.add.text(game.world.width * 0.5, game.world.height * 0.5, 'Life lost, click to continue', textStyle);
+  livesText.anchor.set(0.5);
+  lifeLostText.visible = false;
 }
 // вызывается на каждом кадре
 function update() {
@@ -97,4 +103,34 @@ function ballHitBrick(ball, brick) {
   brick.kill();
   score += 1;
   scoreText.setText(`Points: ${score}`);
+
+  let countAlive = 0;
+
+  for (let i = 0; i < bricks.children.length; i += 1) {
+    if (bricks.children[i].alive == true) {
+      countAlive += 1;
+    }
+  }
+  if (countAlive === 0) {
+    alert('You won the game, congratulations!');
+    document.location.reload();
+  }
+}
+
+// слушатель события, что мяч вышел за границы мира
+function ballLeaveScreen() {
+  lives -= 1;
+  livesText.setText(`Lives: ${lives}`);
+  if (lives) {
+    lifeLostText.visible = true;
+    ball.reset(game.world.width * 0.5, game.world.height - 25);
+    paddle.reset(game.world.width * 0.5, game.world.height - 5);
+    game.input.onDown.addOnce(() => {
+      lifeLostText.visible = false;
+      ball.body.velocity.set(150, -150);
+    }, this);
+  } else {
+    alert('Game over!');// если мяч вылетел, то Game Over
+    document.location.reload();// и перезагрузка страницы
+  }
 }
